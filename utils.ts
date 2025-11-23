@@ -36,19 +36,50 @@ export const getTimelineMonths = (startDate: string, endDate: string) => {
   return months;
 };
 
-// Scale helpers
-export const PIXELS_PER_DAY = 3; // Adjust for zoom
+export const getTimelineWeeks = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const weeks = [];
 
-export const dateToX = (dateStr: string, timelineStartStr: string): number => {
+  // Align to previous Monday
+  const current = new Date(start);
+  const day = current.getDay();
+  const diff = current.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  current.setDate(diff);
+
+  while (current <= end) {
+    weeks.push(new Date(current));
+    current.setDate(current.getDate() + 7);
+  }
+  return weeks;
+};
+
+export const getTimelineDays = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const days = [];
+  
+  const current = new Date(start);
+  while(current <= end) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return days;
+};
+
+// Scale helpers
+// Removed constant PIXELS_PER_DAY. It must be passed dynamically.
+
+export const dateToX = (dateStr: string, timelineStartStr: string, pixelsPerDay: number): number => {
   const date = new Date(dateStr).getTime();
   const start = new Date(timelineStartStr).getTime();
   const diffDays = (date - start) / (1000 * 60 * 60 * 24);
-  return diffDays * PIXELS_PER_DAY;
+  return diffDays * pixelsPerDay;
 };
 
-export const xToDate = (x: number, timelineStartStr: string): string => {
+export const xToDate = (x: number, timelineStartStr: string, pixelsPerDay: number): string => {
   const start = new Date(timelineStartStr).getTime();
-  const daysToAdd = x / PIXELS_PER_DAY;
+  const daysToAdd = x / pixelsPerDay;
   const newDate = new Date(start + daysToAdd * 24 * 60 * 60 * 1000);
   return newDate.toISOString().split('T')[0];
 };

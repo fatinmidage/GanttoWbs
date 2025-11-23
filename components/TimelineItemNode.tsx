@@ -1,6 +1,6 @@
 import React from 'react';
 import { TimelineItem } from '../types';
-import { Star, GripVertical } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { formatDateShort } from '../utils';
 
 interface Props {
@@ -8,6 +8,8 @@ interface Props {
   x: number;
   width?: number; // For ranges
   onMouseDown: (e: React.MouseEvent, type: 'move' | 'resize-left' | 'resize-right') => void;
+  // Note: We don't strictly need pixelsPerDay here if x/width are passed from parent, 
+  // but if we do internal calc we might. Currently parent calc is fine.
 }
 
 export const TimelineItemNode: React.FC<Props> = ({ item, x, width, onMouseDown }) => {
@@ -40,7 +42,7 @@ export const TimelineItemNode: React.FC<Props> = ({ item, x, width, onMouseDown 
           />
 
           {/* Labels */}
-          <div className="mt-2 flex flex-col items-center text-xs font-medium text-gray-800 whitespace-nowrap bg-white/80 backdrop-blur-sm px-1 rounded">
+          <div className="mt-2 flex flex-col items-center text-xs font-medium text-gray-800 whitespace-nowrap bg-white/80 backdrop-blur-sm px-1 rounded pointer-events-none z-30">
              <span>{formatDateShort(item.date)}</span>
              <span className="font-bold">{item.label}</span>
           </div>
@@ -62,13 +64,13 @@ export const TimelineItemNode: React.FC<Props> = ({ item, x, width, onMouseDown 
           </div>
 
           {/* Start Date Label */}
-          <div className="absolute -bottom-8 left-0 -translate-x-1/2 text-[10px] text-gray-600 flex flex-col items-center">
+          <div className="absolute -bottom-8 left-0 -translate-x-1/2 text-[10px] text-gray-600 flex flex-col items-center pointer-events-none">
              <div className="w-3 h-3 rotate-45 mb-1" style={{ backgroundColor: '#3b82f6' }}></div> {/* Blue start diamond */}
              {formatDateShort(item.date)}
           </div>
 
           {/* End Date Label */}
-           <div className="absolute -bottom-8 right-0 translate-x-1/2 text-[10px] text-gray-600 flex flex-col items-center">
+           <div className="absolute -bottom-8 right-0 translate-x-1/2 text-[10px] text-gray-600 flex flex-col items-center pointer-events-none">
              <div className="w-3 h-3 rotate-45 mb-1" style={{ backgroundColor: '#3b82f6' }}></div> {/* Blue end diamond */}
              {item.endDate && formatDateShort(item.endDate)}
           </div>

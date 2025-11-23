@@ -1,13 +1,13 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TimelineData, WBSItem } from '../types';
-import { Sparkles, Loader2, X, Plus, ChevronRight, ChevronDown, Calendar, Trash2, Save } from 'lucide-react';
+import { Sparkles, Loader2, X, ChevronRight, ChevronDown, Trash2, Save } from 'lucide-react';
 import { generateWBS } from '../services/geminiService';
 import { dateToX, formatDateShort } from '../utils';
 
 interface Props {
   rowId: string;
   data: TimelineData;
+  pixelsPerDay: number;
   onUpdateRow: (rowId: string, wbs: WBSItem[]) => void;
   onClose: () => void;
 }
@@ -18,7 +18,7 @@ interface EditState {
   left: number;
 }
 
-export const WBSView: React.FC<Props> = ({ rowId, data, onUpdateRow, onClose }) => {
+export const WBSView: React.FC<Props> = ({ rowId, data, pixelsPerDay, onUpdateRow, onClose }) => {
   const row = data.rows.find(r => r.id === rowId);
   const rowItems = data.items.filter(i => i.rowId === rowId);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -100,18 +100,7 @@ export const WBSView: React.FC<Props> = ({ rowId, data, onUpdateRow, onClose }) 
 
   const openEditModal = (e: React.MouseEvent, item: WBSItem) => {
     e.stopPropagation();
-    // Calculate position relative to the container view
-    // We'll just position it near the click, clamped to viewport logic if needed, 
-    // but for simplicity we use the client coords transformed or absolute offsets.
-    // Since the container is scrollable, fixed position or absolute relative to a parent is tricky.
-    // We will render the modal absolutely within this component, using the click event's offset relative to the component? 
-    // Simpler: Use e.clientY and e.clientX relative to the container logic, or just a fixed centered modal if it's too complex.
-    // Let's try a popover near the bar.
-    
-    // We use the bar's bounding rect
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    // We need coordinates relative to the `WBSView` container if we position absolutely inside it.
-    // Actually, fixed position for the modal is easiest to handle z-index and scrolling.
     
     setEditForm({
       taskName: item.taskName,
@@ -121,7 +110,7 @@ export const WBSView: React.FC<Props> = ({ rowId, data, onUpdateRow, onClose }) 
     setEditState({
       item,
       top: rect.bottom + window.scrollY + 10, 
-      left: Math.max(160, rect.left + window.scrollX) // Prevent going too far left
+      left: Math.max(160, rect.left + window.scrollX) 
     });
   };
 
@@ -134,8 +123,8 @@ export const WBSView: React.FC<Props> = ({ rowId, data, onUpdateRow, onClose }) 
     let nodes: React.ReactNode[] = [];
 
     // Coordinates
-    const startX = dateToX(item.startDate, data.startDate);
-    const endX = dateToX(item.endDate, data.startDate);
+    const startX = dateToX(item.startDate, data.startDate, pixelsPerDay);
+    const endX = dateToX(item.endDate, data.startDate, pixelsPerDay);
     const width = Math.max(endX - startX, 20); // Min width for visibility
 
     // Row Element
@@ -155,10 +144,7 @@ export const WBSView: React.FC<Props> = ({ rowId, data, onUpdateRow, onClose }) 
                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
              </button>
            )}
-           {/* Visual Guide Line for hierarchy could go here */}
            {!hasSubs && <div className="w-6" />} 
-           
-           {/* Tiny label for deep nested items if they get lost? No, user wanted to delete text. */}
         </div>
 
         {/* Timeline Area */}
@@ -248,18 +234,15 @@ export const WBSView: React.FC<Props> = ({ rowId, data, onUpdateRow, onClose }) 
         )}
       </div>
 
-      {/* Edit Popover (Fixed positioning for simplicity in handling stacking context) */}
+      {/* Edit Popover */}
       {editState && (
         <>
-          {/* Backdrop */}
           <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setEditState(null)} />
-          
-          {/* Modal */}
           <div 
             className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-72 flex flex-col space-y-3 animate-in fade-in zoom-in-95 duration-200"
             style={{ 
-              top: Math.min(editState.top, window.innerHeight - 250), // Prevent bottom overflow
-              left: Math.min(editState.left, window.innerWidth - 300) // Prevent right overflow
+              top: Math.min(editState.top, window.innerHeight - 250), 
+              left: Math.min(editState.left, window.innerWidth - 300) 
             }}
           >
             <div className="flex justify-between items-start">

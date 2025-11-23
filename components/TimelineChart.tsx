@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TimelineData, DragState, TimelineItem, WBSItem } from '../types';
-import { GridHeader, GridLines } from './GridBackground';
+import { GridHeader, GridLines, ViewLevels } from './GridBackground';
 import { TimelineItemNode } from './TimelineItemNode';
-import { dateToX, PIXELS_PER_DAY } from '../utils';
-import { ListTree, ChevronDown, ChevronUp } from 'lucide-react';
+import { dateToX } from '../utils';
+import { ListTree, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { WBSView } from './WBSView';
 
 interface Props {
@@ -16,6 +16,16 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+  // --- View Configuration State ---
+  const [pixelsPerDay, setPixelsPerDay] = useState(3);
+  const [visibleLevels, setVisibleLevels] = useState<ViewLevels>({
+    year: true,
+    month: true,
+    week: false,
+    day: false
+  });
+  const [showViewMenu, setShowViewMenu] = useState(false);
 
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
@@ -41,7 +51,7 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
   const startMs = new Date(data.startDate).getTime();
   const endMs = new Date(data.endDate).getTime();
   const totalDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
-  const contentWidth = totalDays * PIXELS_PER_DAY;
+  const contentWidth = totalDays * pixelsPerDay;
   
   // Total Chart Width = Sidebar (160px) + Timeline Content Width
   const chartWidth = Math.max(contentWidth + 160, containerWidth);
@@ -49,7 +59,11 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
   // Calculate total height for grid lines
   const totalHeight = data.rows.reduce((acc, row) => acc + row.height, 0);
 
-  // --- Drag Handlers ---
+  // --- Handlers ---
+  
+  const updateViewLevel = (level: keyof ViewLevels, value: boolean) => {
+    setVisibleLevels(prev => ({ ...prev, [level]: value }));
+  };
 
   const handleMouseDown = (e: React.MouseEvent, item: TimelineItem, type: 'move' | 'resize-left' | 'resize-right') => {
     e.stopPropagation();
@@ -68,7 +82,7 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
     if (!dragState.isDragging || !dragState.itemId) return;
 
     const deltaX = e.clientX - dragState.startX;
-    const deltaDays = deltaX / PIXELS_PER_DAY;
+    const deltaDays = deltaX / pixelsPerDay;
     const deltaMs = deltaDays * 24 * 60 * 60 * 1000;
 
     const newItems = data.items.map(item => {
@@ -110,7 +124,7 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragState]);
+  }, [dragState, pixelsPerDay]); // Added pixelsPerDay dependency to ensure correct calc
 
   const toggleRow = (rowId: string) => {
     setExpandedRowId(prev => prev === rowId ? null : rowId);
@@ -120,8 +134,64 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
     <div className="flex flex-col border border-gray-300 bg-white shadow-xl rounded-lg overflow-hidden w-full h-[800px]">
       {/* Title Header */}
       <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center z-50 relative shrink-0">
-        <h2 className="text-xl font-bold text-gray-800 tracking-tight">{data.title}</h2>
-        <div className="text-xs text-gray-500 italic">Drag items to reschedule</div>
+        <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-gray-800 tracking-tight">{data.title}</h2>
+            <div className="text-xs text-gray-500 italic">Drag items to reschedule</div>
+        </div>
+        
+        {/* View Settings Control */}
+        <div className="relative">
+            <button 
+                onClick={() => setShowViewMenu(!showViewMenu)}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-50 text-sm text-gray-700 shadow-sm"
+            >
+                <Settings2 className="w-4 h-4" />
+                <span>View Options</span>
+            </button>
+            
+            {showViewMenu && (
+                <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowViewMenu(false)} />
+                <div className="absolute right-0 top-10 z-50 w-64 bg-white border border-gray-200 rounded-lg shadow-xl p-4 animate-in fade-in zoom-in-95 duration-100">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Time Granularity</h4>
+                    <div className="space-y-2 mb-4">
+                        <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" checked={visibleLevels.year} onChange={e => updateViewLevel('year', e.target.checked)} className="rounded text-blue-600" />
+                            <span>Year</span>
+                        </label>
+                        <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" checked={visibleLevels.month} onChange={e => updateViewLevel('month', e.target.checked)} className="rounded text-blue-600" />
+                            <span>Month</span>
+                        </label>
+                        <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" checked={visibleLevels.week} onChange={e => updateViewLevel('week', e.target.checked)} className="rounded text-blue-600" />
+                            <span>Week</span>
+                        </label>
+                        <label className="flex items-center space-x-2 text-sm">
+                            <input type="checkbox" checked={visibleLevels.day} onChange={e => updateViewLevel('day', e.target.checked)} className="rounded text-blue-600" />
+                            <span>Day</span>
+                        </label>
+                    </div>
+
+                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Zoom Level</h4>
+                    <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">Wide</span>
+                        <input 
+                            type="range" 
+                            min="1" 
+                            max="50" 
+                            step="1"
+                            value={pixelsPerDay} 
+                            onChange={(e) => setPixelsPerDay(Number(e.target.value))}
+                            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                         <span className="text-xs text-gray-500">Zoom</span>
+                    </div>
+                     <div className="text-center text-[10px] text-gray-400 mt-1">{pixelsPerDay}px / day</div>
+                </div>
+                </>
+            )}
+        </div>
       </div>
 
       {/* Main Scrollable Area */}
@@ -129,20 +199,30 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
         <div style={{ width: `${chartWidth}px`, position: 'relative' }}>
           
           {/* Layer 0: Background Grid Lines */}
-          {/* Positioned absolute, starting AFTER the sidebar (160px) */}
           <div className="absolute top-20 left-40 right-0 bottom-0 z-0">
-             <GridLines startDate={data.startDate} endDate={data.endDate} totalHeight={totalHeight + 1000} />
+             <GridLines 
+                startDate={data.startDate} 
+                endDate={data.endDate} 
+                totalHeight={totalHeight + 1000} 
+                pixelsPerDay={pixelsPerDay}
+                visibleLevels={visibleLevels}
+             />
           </div>
 
-          {/* Layer 3: Sticky Header (z-40 to cover rows z-20) */}
-          <div className="h-20 sticky left-0 right-0 top-0 z-40 bg-white border-b border-gray-200 flex shadow-sm">
-             {/* Sticky Top-Left Corner (matches sidebar width) */}
+          {/* Layer 3: Sticky Header */}
+          <div className="sticky left-0 right-0 top-0 z-40 bg-white border-b border-gray-200 flex shadow-sm min-h-[80px]">
+             {/* Sticky Top-Left Corner */}
              <div className="w-40 shrink-0 bg-white border-r border-gray-200 sticky left-0 z-50 flex items-center justify-center font-bold text-gray-400 text-xs uppercase tracking-widest">
                 Phases
              </div>
              {/* Scrollable Header Area */}
              <div className="flex-1 overflow-hidden relative">
-                <GridHeader startDate={data.startDate} endDate={data.endDate} />
+                <GridHeader 
+                    startDate={data.startDate} 
+                    endDate={data.endDate} 
+                    pixelsPerDay={pixelsPerDay}
+                    visibleLevels={visibleLevels}
+                />
              </div>
           </div>
 
@@ -183,10 +263,10 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
                      {data.items
                        .filter(item => item.rowId === row.id)
                        .map(item => {
-                         const x = dateToX(item.date, data.startDate);
+                         const x = dateToX(item.date, data.startDate, pixelsPerDay);
                          let width = 0;
                          if (item.type === 'range' && item.endDate) {
-                           width = dateToX(item.endDate, data.startDate) - x;
+                           width = dateToX(item.endDate, data.startDate, pixelsPerDay) - x;
                          }
 
                          return (
@@ -209,6 +289,7 @@ export const TimelineChart: React.FC<Props> = ({ data, onDataChange, onUpdateRow
                      <WBSView 
                        rowId={row.id} 
                        data={data} 
+                       pixelsPerDay={pixelsPerDay}
                        onUpdateRow={onUpdateRowWBS} 
                        onClose={() => setExpandedRowId(null)}
                      />
