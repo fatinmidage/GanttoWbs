@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Intelligent Gantt Digitizer",
+  "description": "An interactive project management timeline that converts static Gantt chart images into editable, draggable web components using Gemini 2.5 Flash.",
+  "requestFramePermissions": []
+}
